@@ -1,9 +1,18 @@
 #!flask/bin/python
 from flask import Flask, jsonify, abort, request, url_for, make_response
 from flask_httpauth import HTTPBasicAuth
+from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy import create_engine, MetaData, Table, Column, Integer
+from sqlalchemy.dialects.postgresql import JSONB
+
+connect_str = "dbname='hyperion' user='hyperion' host='localhost' " + \
+              "password='hyperion'"
 
 app = Flask(__name__)
 auth = HTTPBasicAuth()
+app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+app.config["SQLALCHEMY_DATABASE_URI"] = connect_str
+db = SQLAlchemy(app)
 
 
 @auth.get_password
@@ -106,6 +115,63 @@ def get_task(task_id):
     if not task:
         abort(404)
     return jsonify(dict(task[0]))
+
+
+class Person(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    firstName = db.Column(db.String(120), unique=False)
+    lastName = db.Column(db.String(120), unique=False)
+    email = db.Column(db.String(220), unique=False)
+
+    def __init__(self, firstName, lastName, email):
+        self.firstName = firstName
+        self.lastName = lastName
+        self.email = email
+
+
+@app.route('/insert_user', methods=['POST'])
+def insertUser():
+    if not request.json or not 'title' in request.json:
+        abort(400)
+    task = {
+        'id': tasks[-1]['id'] + 1,
+        'title': request.json['title'],
+        'description': request.json.get('description', ""),
+        'done': False
+    }
+    #todo: insert json into database
+    db.session.add(task)
+    db.session.commit()
+    return jsonify({'task': task}), 201
+
+
+Variable_tableName = 'person'
+
+
+@app.route('/dropdb', methods=['GET'])
+def drop_db():
+    engine = create_engine("postgresql://hyperion:hyperion@localhost/hyperion", echo=True)
+    if engine.dialect.has_table(engine, Variable_tableName):  # If table don't exist, Create.
+        metadata = MetaData(engine)
+        Table(Variable_tableName, metadata)
+        metadata.drop_all()
+        return jsonify({'result': True})
+    return jsonify({'result': False})
+
+
+@app.route('/createdb', methods=['GET'])
+def create_table():
+    engine = create_engine("postgresql://hyperion:hyperion@localhost/hyperion", echo=True)
+    if not engine.dialect.has_table(engine, Variable_tableName):  # If table don't exist, Create.
+        metadata = MetaData(engine)
+        # Create a table with the appropriate Columns
+        Table(Variable_tableName, metadata,
+              Column('id', Integer, primary_key=True, nullable=False),
+              Column('data', JSONB))
+        # Implement the creation
+        metadata.create_all()
+        return jsonify({'result': True})
+    return jsonify({'result': False})
 
 
 if __name__ == '__main__':
