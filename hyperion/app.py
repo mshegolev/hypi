@@ -14,8 +14,8 @@ auth = HTTPBasicAuth()
 
 @auth.get_password
 def get_password(username):
-    if username == 'miguel':
-        return 'python'
+    if username == 'atolonline':
+        return 'atolonline'
     return None
 
 
@@ -25,7 +25,7 @@ def unauthorized():
 
 
 @app.route('/invoices', methods=['GET'])
-# @auth.login_required
+@auth.login_required
 def get_invoices():
     conn = psycopg2.connect(connect_str)
     cur = conn.cursor(cursor_factory=RealDictCursor)
@@ -42,7 +42,7 @@ def get_invoices():
 #   curl -i -H "Content-Type: application/json" -X POST -d '{"data": {"uuid":"sldfkj-lasdfj-lsdfj-lsdjf", "foo": "bar"}}'
 #   http://localhost:5000/receiver
 @app.route('/receiver', methods=['POST'])
-# @auth.login_required
+@auth.login_required
 def insert_invoice():
     if not request.json or not 'data' in request.json:
         abort(400)
@@ -60,7 +60,7 @@ def insert_invoice():
 
 
 @app.route('/invoices/<string:uuid>', methods=['GET'])
-# @auth.login_required
+@auth.login_required
 def get_invoice_by_uuid(uuid):
     conn = psycopg2.connect(connect_str)
     cur = conn.cursor(cursor_factory=RealDictCursor)
